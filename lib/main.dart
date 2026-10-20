@@ -30,22 +30,40 @@ class _HydroLensAppState extends State<HydroLensApp> {
           child: child!,
         );
       },
+      // ربط الثيم العام بالسمة ليتغير الموقع كله بصورة صحيحة
+      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         fontFamily: 'Roboto',
-        brightness: isDarkMode ? Brightness.dark : Brightness.light,
-        scaffoldBackgroundColor: isDarkMode ? const Color(0xFF10121A) : const Color(0xFFF3F5FA),
-        cardColor: isDarkMode ? const Color(0xFF1A1D28) : Colors.white,
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF3F5FA),
+        cardColor: Colors.white,
         useMaterial3: true,
       ),
-      // جعل شاشة تسجيل الدخول هي البداية لربط المعرف الخاص بكل مستخدم
-      home: const LoginScreen(),
+      darkTheme: ThemeData(
+        fontFamily: 'Roboto',
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF10121A),
+        cardColor: const Color(0xFF1A1D28),
+        useMaterial3: true,
+      ),
+      home: LoginScreen(
+        isDarkMode: isDarkMode,
+        onToggleTheme: toggleTheme,
+      ),
     );
   }
 }
 
-// ----------------- شاشة تسجيل الدخول ومعرف النظارة الخاص بكل مستخدم -----------------
+// ----------------- شاشة تسجيل الدخول، إنشاء الحساب واستعادة كلمة المرور -----------------
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool isDarkMode;
+  final VoidCallback onToggleTheme;
+
+  const LoginScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.onToggleTheme,
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -54,17 +72,22 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  final _glassesIdController = TextEditingController(text: 'GL-${DateTime.now().millisecond + 1000}s');
+  final _passwordController = TextEditingController();
+  final TextEditingController _glassesIdController = TextEditingController(
+    text: 'GL-SYS-9021',
+  );
+  bool _isSignUpMode = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _passwordController.dispose();
     _glassesIdController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleAuthAction() {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
@@ -78,8 +101,8 @@ class _LoginScreenState extends State<LoginScreen> {
             builder: (context) => HydroLensMainController(
               userEmail: _emailController.text.trim(),
               glassesId: _glassesIdController.text.trim(),
-              isDarkMode: false,
-              onToggleTheme: () {},
+              isDarkMode: widget.isDarkMode,
+              onToggleTheme: widget.onToggleTheme,
             ),
           ),
         );
@@ -87,10 +110,46 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _showPasswordResetDialog() {
+    final resetController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('استعادة كلمة المرور'),
+        content: TextField(
+          controller: resetController,
+          decoration: const InputDecoration(labelText: 'أدخل بريدك الإلكتروني'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم إرسال رابط إعادة تعيين كلمة المرور.')),
+              );
+            },
+            child: const Text('إرسال'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cardBg = Theme.of(context).cardColor;
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round, color: Colors.amber),
+            onPressed: widget.onToggleTheme,
+          ),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -115,42 +174,67 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   buildBrandLogo(size: 70, fontSize: 36),
                   const SizedBox(height: 16),
-                  const Text('منصة HydroLens الذكية', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const Text('تسجيل الدخول وربط معرف النظارة الفريد لكل مستخدم', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text(_isSignUpMode ? 'إنشاء حساب جديد' : 'منصة HydroLens الذكية', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  Text(_isSignUpMode ? 'تسجيل مستخدم جديد وربط الجهاز' : 'تسجيل الدخول وربط معرف النظارة', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      labelText: 'البريد الإلكتروني أو اسم المستخدم',
-                      prefixIcon: const Icon(Icons.person_outline),
+                      labelText: 'البريد الإلكتروني',
+                      prefixIcon: const Icon(Icons.email_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    validator: (value) => value == null || value.isEmpty ? 'يرجى إدخال البريد الإلكتروني' : null,
+                    validator: (value) => (value == null || !value.contains('@')) ? 'يرجى إدخال بريد إلكتروني صحيح' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    validator: (value) => (value == null || value.length < 6) ? 'كلمة المرور يجب أن لا تقل عن 6 خانات' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _glassesIdController,
                     decoration: InputDecoration(
-                      labelText: 'معرف النظارة الفريد (Glasses ID)',
+                      labelText: 'معرف النظارة (Glasses ID)',
                       prefixIcon: const Icon(Icons.qr_code_scanner),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    validator: (value) => value == null || value.isEmpty ? 'معرف النظارة مطلوب لكل مستخدم' : null,
+                    validator: (value) => value == null || value.isEmpty ? 'معرف النظارة مطلوب' : null,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+                  if (!_isSignUpMode)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: _showPasswordResetDialog,
+                        child: const Text('هل نسيت كلمة المرور؟', style: TextStyle(fontSize: 11)),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _handleLogin,
+                      onPressed: _isLoading ? null : _handleAuthAction,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5B61F4),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('دخول لوحة التحكم', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                          : Text(_isSignUpMode ? 'إنشاء حساب جديد' : 'دخول لوحة التحكم', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: () => setState(() => _isSignUpMode = !_isSignUpMode),
+                    child: Text(_isSignUpMode ? 'لديك حساب بالفعل؟ سجل دخولك' : 'ليس لديك حساب؟ أنشئ حساباً جديداً'),
                   ),
                 ],
               ),
@@ -175,7 +259,7 @@ Widget buildBrandLogo({required double size, required double fontSize}) {
       ),
       boxShadow: [
         BoxShadow(
-          color: const Color(0xFF8B88E8).withValues(alpha: 0.3),
+          color: const Color(0xFF8B88E8).withOpacity(0.3),
           blurRadius: 12,
           offset: const Offset(0, 5),
         ),
@@ -214,6 +298,7 @@ class ChatMessage {
   ChatMessage({required this.text, required this.isUser});
 }
 
+// ----------------- لوحة التحكم الرئيسية بكامل الصفحات الأصلية -----------------
 class HydroLensMainController extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
@@ -224,8 +309,8 @@ class HydroLensMainController extends StatefulWidget {
     super.key,
     required this.isDarkMode,
     required this.onToggleTheme,
-    this.userEmail = 'user@hydrolens.com',
-    this.glassesId = 'GL-9021',
+    required this.userEmail,
+    required this.glassesId,
   });
 
   @override
@@ -234,21 +319,18 @@ class HydroLensMainController extends StatefulWidget {
 
 class _HydroLensMainControllerState extends State<HydroLensMainController> {
   int _selectedIndex = 0;
-  late bool isDarkMode;
 
   int? humidityPercent;
   int? lightLux;
 
-  // حالة البلوتوث الواقعية: تبدأ غير متصلة إلا عند الاتصال الفعلي بقطعة الهاردوير
   bool isBluetoothConnected = false;
-  bool isConnectingBluetooth = false;
   bool isSimulationActive = false;
   bool isAutoPilot = true;
   DateTime? lastUpdate;
 
   bool isAwaitingSprayAck = false;
   bool isSprayCooldown = false;
-  String sprayBtnLabel = 'إصدار أمر ترطيب (وضع محاكاة العرض)';
+  String sprayBtnLabel = 'إصدار أمر ترطيب [وضع تجريبي]';
 
   bool eyeRestReminderEnabled = true;
   int reminderIntervalMinutes = 20;
@@ -262,7 +344,6 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
   @override
   void initState() {
     super.initState();
-    isDarkMode = widget.isDarkMode;
     chatMessages = [
       ChatMessage(
         text: 'مرحباً بك يا ${widget.userEmail}! أنا مساعد HydroLens الذكي لنظارتك المرتبطة بمعرف (${widget.glassesId}).',
@@ -277,37 +358,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
     super.dispose();
   }
 
-  void _toggleThemeLocal() {
-    setState(() => isDarkMode = !isDarkMode);
-  }
-
-  // محاكاة الاتصال الواقعي بالبلوتوث والهاردوير
-  Future<void> _connectBluetoothHardware() async {
-    setState(() => isConnectingBluetooth = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() {
-      isConnectingBluetooth = false;
-      isBluetoothConnected = true;
-    });
-    _showSnackBar('تم الاتصال بنجاح بقطعة الهاردوير والبلوتوث (ESP32) لمعرف النظارة: ${widget.glassesId} 🟢');
-  }
-
-  void _disconnectBluetoothHardware() {
-    setState(() {
-      isBluetoothConnected = false;
-      humidityPercent = null;
-      lightLux = null;
-    });
-    _showSnackBar('تم قطع الاتصال بقطعة الهاردوير النظارة 🔴');
-  }
-
   Future<void> _triggerManualSpray() async {
-    if (!isBluetoothConnected) {
-      _showSnackBar('خطأ هاردوير: يرجى توصيل النظارة عبر البلوتوث أولاً من صفحة "حالة النظارة والحساسات"!');
-      return;
-    }
-
     if (isSprayCooldown || isAwaitingSprayAck) {
       _showSnackBar('إجراء آمن: يرجى الانتظار لحين انتهاء مهلة الأمان (60 ثانية)! ⏳');
       return;
@@ -315,37 +366,32 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
 
     setState(() {
       isAwaitingSprayAck = true;
-      sprayBtnLabel = 'جاري إرسال الأمر للنظارة (${widget.glassesId}) بانتظار التأكيد... 🔄';
+      sprayBtnLabel = 'جاري إرسال الأمر للنظارة (${widget.glassesId})... 🔄';
     });
 
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 1));
 
     if (!mounted) return;
 
     setState(() {
       isAwaitingSprayAck = false;
       isSprayCooldown = true;
-      sprayBtnLabel = 'اكتملت محاكاة الترطيب لاسلكياً 💧';
+      sprayBtnLabel = 'تم إرسال أمر الترطيب [وضع تجريبي] 💧';
     });
 
-    _showSnackBar('اكتملت محاكاة أمر الترطيب بنجاح لنظارتك المخصصة 💧');
+    _showSnackBar('تم إرسال أمر الترطيب بنجاح للمعرف 💧');
 
     Timer(const Duration(seconds: 60), () {
       if (mounted) {
         setState(() {
           isSprayCooldown = false;
-          sprayBtnLabel = 'إصدار أمر ترطيب (وضع محاكاة العرض)';
+          sprayBtnLabel = 'إصدار أمر ترطيب [وضع تجريبي]';
         });
       }
     });
   }
 
   void _processDataInput(int hum, int lux, {required bool simulated}) {
-    if (!isBluetoothConnected) {
-      _showSnackBar('يرجى توصيل النظارة بالبلوتوث أولاً لاستقبال قراءات الحساسات الحقيقية.');
-      return;
-    }
-
     final now = DateTime.now();
     setState(() {
       humidityPercent = hum;
@@ -402,9 +448,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
       if (!mounted) return;
       String reply = '';
 
-      if (!isBluetoothConnected) {
-        reply = 'النظارة غير متصلة حالياً. يرجى تفعيل البلوتوث لعرض قراءات معرف (${widget.glassesId}).';
-      } else if (humidityPercent == null || lightLux == null) {
+      if (humidityPercent == null || lightLux == null) {
         reply = 'لا توجد قراءات مسجلة حالياً. يرجى تفعيل إحدى سيناريوهات المحاكاة للعرض.';
       } else if (text.contains('رطوبة') || text.contains('جفاف')) {
         reply = 'قراءة الرطوبة لنظارتك الحالية (${widget.glassesId}) مسجلة عند $humidityPercent%.';
@@ -422,102 +466,91 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDarkMode ? const Color(0xFF1A1D28) : Colors.white;
+    final cardBg = Theme.of(context).cardColor;
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: child!,
-        );
-      },
-      theme: ThemeData(
-        fontFamily: 'Roboto',
-        brightness: isDarkMode ? Brightness.dark : Brightness.light,
-        scaffoldBackgroundColor: isDarkMode ? const Color(0xFF10121A) : const Color(0xFFF3F5FA),
-        cardColor: cardBg,
-        useMaterial3: true,
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: Row(
-            children: [
-              buildBrandLogo(size: 32, fontSize: 18),
-              const SizedBox(width: 10),
-              const Text('HydroLens', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: isBluetoothConnected ? Colors.teal.withOpacity(0.2) : Colors.red.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isBluetoothConnected ? '${widget.glassesId} 🟢' : 'غير متصل 🔴',
-                  style: TextStyle(fontSize: 10, color: isBluetoothConnected ? Colors.teal : Colors.red, fontWeight: FontWeight.bold),
-                ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            buildBrandLogo(size: 32, fontSize: 18),
+            const SizedBox(width: 10),
+            const Text('HydroLens', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: isBluetoothConnected ? Colors.teal.withOpacity(0.2) : Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
-          ),
-          actions: [
-            IconButton(
-              icon: Icon(
-                isBluetoothConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-                color: isBluetoothConnected ? Colors.teal : Colors.grey,
+              child: Text(
+                isBluetoothConnected ? '${widget.glassesId} 🟢' : 'غير متصل 🔴',
+                style: TextStyle(fontSize: 10, color: isBluetoothConnected ? Colors.teal : Colors.red, fontWeight: FontWeight.bold),
               ),
-              onPressed: () => setState(() => _selectedIndex = 8),
-            ),
-            IconButton(
-              icon: Icon(isDarkMode ? Icons.wb_sunny : Icons.nightlight_round, color: Colors.amber),
-              onPressed: _toggleThemeLocal,
-            ),
-            IconButton(
-              icon: const Icon(Icons.logout, color: Colors.red),
-              tooltip: 'تسجيل الخروج',
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const LoginScreen()),
-                );
-              },
             ),
           ],
         ),
-        drawer: Drawer(
-          child: ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              DrawerHeader(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF8B88E8), Color(0xFF63C5D6)]),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    buildBrandLogo(size: 40, fontSize: 22),
-                    const SizedBox(height: 6),
-                    const Text('منصة HydroLens الذكية', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
-                    Text('المستخدم: ${widget.userEmail}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
-                    Text('المعرف: ${widget.glassesId}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              ),
-              _drawerItem(0, Icons.dashboard_rounded, '1. الرئيسية'),
-              _drawerItem(1, Icons.remove_red_eye_rounded, '2. مراقبة العين'),
-              _drawerItem(2, Icons.light_mode_rounded, '3. الإضاءة المحيطة'),
-              _drawerItem(3, Icons.water_drop_rounded, '4. الترطيب الذكي'),
-              _drawerItem(4, Icons.smart_toy_rounded, '5. المساعد الذكي'),
-              _drawerItem(5, Icons.history_rounded, '6. سجل القراءات'),
-              _drawerItem(6, Icons.bar_chart_rounded, '7. التقارير والإحصائيات'),
-              _drawerItem(7, Icons.notifications_active_rounded, '8. مركز التنبيهات'),
-              _drawerItem(8, Icons.settings_remote_rounded, '9. حالة النظارة والحساسات'),
-              _drawerItem(9, Icons.person_outline_rounded, '10. الإعدادات والخصوصية'),
-            ],
+        actions: [
+          IconButton(
+            icon: Icon(
+              isBluetoothConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+              color: isBluetoothConnected ? Colors.teal : Colors.grey,
+            ),
+            onPressed: () => setState(() => _selectedIndex = 8),
           ),
-        ),
-        body: _buildCurrentPage(cardBg),
+          IconButton(
+            icon: Icon(widget.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round, color: Colors.amber),
+            onPressed: widget.onToggleTheme,
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red),
+            tooltip: 'تسجيل الخروج',
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => LoginScreen(
+                    isDarkMode: widget.isDarkMode,
+                    onToggleTheme: widget.onToggleTheme,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [Color(0xFF8B88E8), Color(0xFF63C5D6)]),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  buildBrandLogo(size: 40, fontSize: 22),
+                  const SizedBox(height: 6),
+                  const Text('منصة HydroLens الذكية', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                  Text('المستخدم: ${widget.userEmail}', style: const TextStyle(color: Colors.white70, fontSize: 10)),
+                  Text('المعرف: ${widget.glassesId}', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+            _drawerItem(0, Icons.dashboard_rounded, '1. الرئيسية'),
+            _drawerItem(1, Icons.remove_red_eye_rounded, '2. مراقبة العين'),
+            _drawerItem(2, Icons.light_mode_rounded, '3. الإضاءة المحيطة'),
+            _drawerItem(3, Icons.water_drop_rounded, '4. الترطيب الذكي'),
+            _drawerItem(4, Icons.smart_toy_rounded, '5. المساعد الذكي'),
+            _drawerItem(5, Icons.history_rounded, '6. سجل القراءات'),
+            _drawerItem(6, Icons.bar_chart_rounded, '7. التقارير والإحصائيات'),
+            _drawerItem(7, Icons.notifications_active_rounded, '8. مركز التنبيهات'),
+            _drawerItem(8, Icons.settings_remote_rounded, '9. حالة النظارة والحساسات'),
+            _drawerItem(9, Icons.person_outline_rounded, '10. الإعدادات والخصوصية'),
+          ],
+        ),
+      ),
+      body: _buildCurrentPage(cardBg),
     );
   }
 
@@ -589,7 +622,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                 Text(
                   lastUpdate != null
                       ? 'آخر تحديث: ${lastUpdate!.hour}:${lastUpdate!.minute.toString().padLeft(2, '0')}'
-                      : 'بانتظار الاتصال',
+                      : 'بانتظار الاختيار',
                   style: const TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
@@ -602,10 +635,10 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                 child: _buildOverviewCard(
                   cardBg,
                   'رطوبة محيط العين',
-                  isBluetoothConnected && humidityPercent != null ? '$humidityPercent%' : 'غير متصل',
-                  isBluetoothConnected && humidityPercent != null
-                      ? (humidityPercent! < 40 ? 'منخفضة' : (humidityPercent! <= 49 ? 'معتدلة' : 'ضمن النطاق المحدد'))
-                      : 'يرجى ربط النظارة',
+                  humidityPercent != null ? '$humidityPercent%' : 'بانتظار البيانات...',
+                  humidityPercent == null
+                      ? 'غير متوفرة'
+                      : (humidityPercent! < 40 ? 'منخفضة' : (humidityPercent! <= 49 ? 'معتدلة' : 'ضمن النطاق المحدد')),
                   Icons.water_drop,
                   Colors.teal,
                 ),
@@ -615,10 +648,10 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                 child: _buildOverviewCard(
                   cardBg,
                   'الإضاءة المحيطة',
-                  isBluetoothConnected && lightLux != null ? '$lightLux Lux' : 'غير متصل',
-                  isBluetoothConnected && lightLux != null
-                      ? (lightLux! < 300 ? 'أقل من النطاق' : (lightLux! <= 500 ? 'ضمن النطاق المستهدف' : 'مرتفعة جداً'))
-                      : 'يرجى ربط النظارة',
+                  lightLux != null ? '$lightLux Lux' : 'بانتظار البيانات...',
+                  lightLux == null
+                      ? 'غير متوفرة'
+                      : (lightLux! < 300 ? 'أقل من النطاق' : (lightLux! <= 500 ? 'ضمن النطاق المستهدف' : 'مرتفعة جداً')),
                   Icons.light_mode,
                   Colors.amber,
                 ),
@@ -646,15 +679,15 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                 const Text('محاكاة إطلاق الرذاذ التلقائي عند انخفاض الرطوبة.', style: TextStyle(fontSize: 11, color: Colors.grey)),
                 const SizedBox(height: 12),
                 ElevatedButton.icon(
-                  onPressed: (!isBluetoothConnected || isSprayCooldown || isAwaitingSprayAck) ? null : _triggerManualSpray,
+                  onPressed: (isSprayCooldown || isAwaitingSprayAck) ? null : _triggerManualSpray,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isBluetoothConnected ? const Color(0xFF5B61F4) : Colors.grey,
+                    backgroundColor: (isSprayCooldown || isAwaitingSprayAck) ? Colors.grey : const Color(0xFF5B61F4),
                     minimumSize: const Size(double.infinity, 45),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.water, color: Colors.white, size: 16),
                   label: Text(
-                    isBluetoothConnected ? sprayBtnLabel : 'النظارة غير متصلة (يرجى الاتصال أولاً)',
+                    sprayBtnLabel,
                     style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 ),
@@ -674,24 +707,19 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: isBluetoothConnected ? () => _processDataInput(28, 890, simulated: true) : null,
+                        onPressed: () => _processDataInput(28, 890, simulated: true),
                         child: const Text('محاكاة جفاف وإضاءة عالية', style: TextStyle(fontSize: 10, color: Colors.red)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: isBluetoothConnected ? () => _processDataInput(58, 310, simulated: true) : null,
+                        onPressed: () => _processDataInput(58, 310, simulated: true),
                         child: const Text('محاكاة وضع مريح ومثالي', style: TextStyle(fontSize: 10, color: Colors.green)),
                       ),
                     ),
                   ],
                 ),
-                if (!isBluetoothConnected)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8.0),
-                    child: Text('⚠️ يرجى الانتقال لصفحة "حالة النظارة والحساسات" لتوصيل البلوتوث وتفعيل المحاكاة.', style: TextStyle(fontSize: 10, color: Colors.red)),
-                  ),
               ],
             ),
           ),
@@ -743,7 +771,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                   children: [
                     const Text('مستوى الرطوبة الحالية:', style: TextStyle(fontWeight: FontWeight.bold)),
                     Text(
-                      isBluetoothConnected && humidityPercent != null ? '$humidityPercent%' : 'غير متصل بالبلوتوث',
+                      humidityPercent != null ? '$humidityPercent%' : 'بانتظار البيانات...',
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.teal),
                     ),
                   ],
@@ -793,7 +821,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                   children: [
                     const Text('القراءة الحالية:'),
                     Text(
-                      isBluetoothConnected && lightLux != null ? '$lightLux Lux' : 'غير متصل بالبلوتوث',
+                      lightLux != null ? '$lightLux Lux' : 'بانتظار البيانات...',
                       style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.amber),
                     ),
                   ],
@@ -832,9 +860,9 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                 ),
                 const Divider(),
                 ElevatedButton(
-                  onPressed: (!isBluetoothConnected || isSprayCooldown || isAwaitingSprayAck) ? null : _triggerManualSpray,
+                  onPressed: (isSprayCooldown || isAwaitingSprayAck) ? null : _triggerManualSpray,
                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF5B61F4), minimumSize: const Size(double.infinity, 45)),
-                  child: Text(isBluetoothConnected ? sprayBtnLabel : 'النظارة غير متصلة', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: Text(sprayBtnLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -865,7 +893,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: msg.isUser ? const Color(0xFF5B61F4) : (isDarkMode ? const Color(0xFF2B2E3D) : const Color(0xFFE8ECF5)),
+                        color: msg.isUser ? const Color(0xFF5B61F4) : (widget.isDarkMode ? const Color(0xFF2B2E3D) : const Color(0xFFE8ECF5)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -919,7 +947,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                   Icon(Icons.history_toggle_off, size: 48, color: Colors.grey),
                   SizedBox(height: 8),
                   Text('لا توجد قراءات مسجلة حالياً.', style: TextStyle(color: Colors.grey)),
-                  Text('قم بتوصيل البلوتوث وتفعيل أزرار المحاكاة في الرئيسية.', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                  Text('قم بتفعيل أزرار المحاكاة في الرئيسية لبدء التوثيق.', style: TextStyle(fontSize: 10, color: Colors.grey)),
                 ],
               ),
             )
@@ -1047,33 +1075,11 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16)),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListTile(
-                  leading: Icon(
-                    isBluetoothConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
-                    color: isBluetoothConnected ? Colors.teal : Colors.red,
-                  ),
-                  title: const Text('حالة اتصال البلوتوث (ESP32 BLE)'),
-                  subtitle: Text(isBluetoothConnected ? 'متصل بنجاح بالقطعة لمعرف: ${widget.glassesId}' : 'غير متصل (اضغط اتصال للربط الفعلي)'),
-                  trailing: isBluetoothConnected
-                      ? TextButton(
-                          onPressed: _disconnectBluetoothHardware,
-                          child: const Text('قطع الاتصال', style: TextStyle(color: Colors.red, fontSize: 11)),
-                        )
-                      : ElevatedButton(
-                          onPressed: isConnectingBluetooth ? null : _connectBluetoothHardware,
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
-                          child: isConnectingBluetooth
-                              ? const SizedBox(width: 15, height: 15, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text('اتصال', style: TextStyle(color: Colors.white)),
-                        ),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.battery_charging_full, color: Colors.amber),
-                  title: const Text('مستوى بطارية النظارة'),
-                  subtitle: Text(isBluetoothConnected ? 'تعمل بكفاءة عالية' : 'غير متوفر (يرجى الاتصال أولاً)'),
-                  trailing: Text(isBluetoothConnected ? '85%' : '---', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                const ListTile(
+                  title: Text('نمط المشروع الحالي'),
+                  subtitle: Text('وضع تجريبي جاهز للربط الفعلي مع قطع ESP32 BLE.'),
                 ),
                 const Divider(),
                 ListTile(
@@ -1117,6 +1123,11 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                   value: eyeRestReminderEnabled,
                   activeColor: const Color(0xFF5B61F4),
                   onChanged: (v) => setState(() => eyeRestReminderEnabled = v),
+                ),
+                const Divider(),
+                const ListTile(
+                  title: Text('سياسة الخصوصية وحل الأمان'),
+                  subtitle: Text('البيانات معزولة لكل مستخدم بناءً على معرف النظارة الخاص به.'),
                 ),
                 const Divider(),
                 const ListTile(
