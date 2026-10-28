@@ -22,7 +22,7 @@ class _HydroLensAppState extends State<HydroLensApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'HydroLens',
+      title: 'HydroLens - Smart Eyewear Platform',
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
         return Directionality(
@@ -30,26 +30,376 @@ class _HydroLensAppState extends State<HydroLensApp> {
           child: child!,
         );
       },
-      // ربط الثيم العام بالسمة ليتغير الموقع كله بصورة صحيحة
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
         fontFamily: 'Roboto',
         brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF3F5FA),
+        scaffoldBackgroundColor: const Color(0xFFF8FAFC),
         cardColor: Colors.white,
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         fontFamily: 'Roboto',
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF10121A),
-        cardColor: const Color(0xFF1A1D28),
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+        cardColor: const Color(0xFF1E293B),
         useMaterial3: true,
       ),
-      home: LoginScreen(
+      home: LandingScreen(
         isDarkMode: isDarkMode,
         onToggleTheme: toggleTheme,
       ),
+    );
+  }
+}
+
+// ----------------- الصفحة الرئيسية التعريفية الشاملة (Landing Page) -----------------
+class LandingScreen extends StatelessWidget {
+  final bool isDarkMode;
+  final VoidCallback onToggleTheme;
+
+  const LandingScreen({
+    super.key,
+    required this.isDarkMode,
+    required this.onToggleTheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = Theme.of(context).cardColor;
+    final primaryColor = const Color(0xFF5B61F4);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: cardBg,
+        elevation: 1,
+        title: Row(
+          children: [
+            buildBrandLogo(size: 38, fontSize: 20),
+            const SizedBox(width: 10),
+            const Text(
+              'HydroLens',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(isDarkMode ? Icons.wb_sunny : Icons.nightlight_round, color: Colors.amber),
+            onPressed: onToggleTheme,
+          ),
+          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.only(left: 16.0),
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginScreen(
+                      isDarkMode: isDarkMode,
+                      onToggleTheme: onToggleTheme,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              ),
+              icon: const Icon(Icons.dashboard, color: Colors.white, size: 16),
+              label: const Text(
+                'لوحة التحكم',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Hero Section
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isDarkMode
+                      ? [const Color(0xFF1E1B4B), const Color(0xFF0F172A)]
+                      : [const Color(0xFFEEF2FF), const Color(0xFFF8FAFC)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                children: [
+                  buildBrandLogo(size: 90, fontSize: 45),
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'مشروع تخرج أكاديمي مبتكر 🎓',
+                      style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'نظارة HydroLens الذكية لحماية وصحة العين',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 12),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 650),
+                    child: const Text(
+                      'منظومة متكاملة تجمع بين المستشعرات الذكية (ESP32) لمنع جفاف العين ومراقبة الإضاءة المحيطة، مدمجة مع منصة ويب تفاعلية ومساعد برمجيات ذكي لتتبع الصحة البصرية بشكل لحظي.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.6),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LoginScreen(
+                                isDarkMode: isDarkMode,
+                                onToggleTheme: onToggleTheme,
+                              ),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        icon: const Icon(Icons.login, color: Colors.white),
+                        label: const Text(
+                          'الدخول للنظام وربط النظارة',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Features Section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+              child: Column(
+                children: [
+                  const Text(
+                    'مميزات تقنية HydroLens المتقدمة',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'تم تصميم النظام ليوفر حماية متكاملة بصرية وتقنية',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 30),
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 20,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      _buildFeatureCard(
+                        context,
+                        title: 'الترطيب الأوتوماتيكي الذكي 💧',
+                        desc: 'استشعار الجفاف وإطلاق رذاذ مائي ناعم تلقائياً للمحافظة على رطوبة منطقة العين.',
+                        icon: Icons.water_drop_rounded,
+                        color: Colors.teal,
+                      ),
+                      _buildFeatureCard(
+                        context,
+                        title: 'مراقبة الإضاءة المحيطة 💡',
+                        desc: 'قياس شدة الضوء بـ Lux وتنبيه المستخدم لتعديل السطوع لحماية الشبكية.',
+                        icon: Icons.light_mode_rounded,
+                        color: Colors.amber,
+                      ),
+                      _buildFeatureCard(
+                        context,
+                        title: 'المساعد والتحليل الذكي 🧠',
+                        desc: 'مساعد ذكي يحلل السجلات السابقة ويعطي توصيات مخصصة للراحة وفق قاعدة 20-20-20.',
+                        icon: Icons.smart_toy_rounded,
+                        color: Colors.indigo,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // How it Works Section
+            Container(
+              color: isDarkMode ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+              width: double.infinity,
+              child: Column(
+                children: [
+                  const Text(
+                    'كيف تعمل المنظومة؟',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 24),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStepItem('1', 'مستشعرات النظارة', 'قراءة معدل الرمش والإضاءة'),
+                        const Icon(Icons.arrow_back, color: Colors.grey),
+                        _buildStepItem('2', 'معالجة ESP32', 'إتخاذ القرار والترطيب الذكي'),
+                        const Icon(Icons.arrow_back, color: Colors.grey),
+                        _buildStepItem('3', 'لوحة التحكم الويب', 'عرض التقارير والإحصائيات'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Contact Us Section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: cardBg,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text('تواصل معنا / الدعم الأكاديمي 📩', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      const Text('يسعدنا استقبال الاستفسارات والاقتراحات حول مشروع HydroLens', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      const SizedBox(height: 20),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'الاسم الكريم / الجهة',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'البريد الإلكتروني',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          labelText: 'الرسالة أو الأستفسار',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('تم استلام رسالتك بنجاح. شكراً لتواصلك!')),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primaryColor,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('إرسال الرسالة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Footer
+            Container(
+              padding: const EdgeInsets.all(20),
+              color: isDarkMode ? const Color(0xFF090D16) : const Color(0xFFE2E8F0),
+              width: double.infinity,
+              child: Column(
+                children: [
+                  const Text(
+                    'حقوق الطبع محفوظة © 2026 | مشروع تخرج HydroLens الذكي',
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard(BuildContext context, {required String title, required String desc, required IconData icon, required Color color}) {
+    final cardBg = Theme.of(context).cardColor;
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withOpacity(0.15),
+            radius: 28,
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 14),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(desc, style: const TextStyle(fontSize: 11, color: Colors.grey, height: 1.5), textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepItem(String stepNum, String title, String sub) {
+    return Column(
+      children: [
+        CircleAvatar(
+          backgroundColor: const Color(0xFF5B61F4),
+          radius: 18,
+          child: Text(stepNum, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 8),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        Text(sub, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      ],
     );
   }
 }
@@ -508,7 +858,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => LoginScreen(
+                  builder: (context) => LandingScreen(
                     isDarkMode: widget.isDarkMode,
                     onToggleTheme: widget.onToggleTheme,
                   ),
@@ -1107,9 +1457,9 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
             decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
-                ListTile(
-                  title: const Text('المستخدم الحالي'),
-                  subtitle: Text(widget.userEmail, style: const TextStyle(fontWeight: FontWeight.bold)),
+                const ListTile(
+                  title: Text('المستخدم الحالي'),
+                  subtitle: Text('مستخدم النظام'),
                 ),
                 const Divider(),
                 ListTile(
