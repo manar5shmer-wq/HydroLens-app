@@ -120,7 +120,6 @@ class LandingScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Hero Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 24),
@@ -137,20 +136,8 @@ class LandingScreen extends StatelessWidget {
                 children: [
                   buildBrandLogo(size: 90, fontSize: 45),
                   const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      'مشروع تخرج أكاديمي مبتكر 🎓',
-                      style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   const Text(
-                    'نظارة HydroLens الذكية لحماية وصحة العين',
+                    'النظارة الذكية لحماية صحة العين',
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
                   ),
@@ -158,7 +145,7 @@ class LandingScreen extends StatelessWidget {
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 650),
                     child: const Text(
-                      'منظومة متكاملة تجمع بين المستشعرات الذكية (ESP32) لمنع جفاف العين ومراقبة الإضاءة المحيطة، مدمجة مع منصة ويب تفاعلية ومساعد برمجيات ذكي لتتبع الصحة البصرية بشكل لحظي.',
+                      'منظومة تقنية متكاملة لتشخيص وحماية صحة البصر، تجمع بين وحدات استشعار متطورة (ESP32) لمنع جفاف العين ومراقبة الإضاءة المحيطة، مدعومة بمنصة ويب تفاعلية ومساعد ذكي لتحليل البيانات بشكل لحظي.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.6),
                     ),
@@ -404,7 +391,7 @@ class LandingScreen extends StatelessWidget {
   }
 }
 
-// ----------------- شاشة تسجيل الدخول، إنشاء الحساب واستعادة كلمة المرور -----------------
+// ----------------- شاشة تسجيل الدخول -----------------
 class LoginScreen extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
@@ -648,7 +635,7 @@ class ChatMessage {
   ChatMessage({required this.text, required this.isUser});
 }
 
-// ----------------- لوحة التحكم الرئيسية بكامل الصفحات الأصلية -----------------
+// ----------------- لوحة التحكم الرئيسية والمساعد الذكي -----------------
 class HydroLensMainController extends StatefulWidget {
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
@@ -696,7 +683,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
     super.initState();
     chatMessages = [
       ChatMessage(
-        text: 'مرحباً بك يا ${widget.userEmail}! أنا مساعد HydroLens الذكي لنظارتك المرتبطة بمعرف (${widget.glassesId}).',
+        text: 'أهلاً بك يا ${widget.userEmail}! أنا مساعد HydroLens الذكي المرتبط بمعرف نظارتك (${widget.glassesId}). اسألني عن قراءات الرطوبة، الإضاءة، أو أي استشارة لصحة عينك، وأنا جاهز لإجابتك فوراً!',
         isUser: false,
       ),
     ];
@@ -794,18 +781,33 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
       _chatInputController.clear();
     });
 
-    Future.delayed(const Duration(milliseconds: 500), () {
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
       String reply = '';
+      final query = text.toLowerCase();
 
-      if (humidityPercent == null || lightLux == null) {
-        reply = 'لا توجد قراءات مسجلة حالياً. يرجى تفعيل إحدى سيناريوهات المحاكاة للعرض.';
-      } else if (text.contains('رطوبة') || text.contains('جفاف')) {
-        reply = 'قراءة الرطوبة لنظارتك الحالية (${widget.glassesId}) مسجلة عند $humidityPercent%.';
-      } else if (text.contains('إضاءة') || text.contains('ضوء')) {
-        reply = 'شدة الإضاءة المحيطة الحالية مسجلة عند $lightLux Lux.';
+      if (query.contains('مرحبا') || query.contains('السلام') || query.contains('أهلاً')) {
+        reply = 'أهلاً بك! أنا مساعد HydroLens الذكي. كيف يمكنني مساعدتك في صحة عينك أو قراءات نظارتك اليوم؟';
+      } else if (query.contains('رطوبة') || query.contains('جفاف') || query.contains('ماء')) {
+        if (humidityPercent == null) {
+          reply = 'لم يتم تسجيل قراءة رطوبة بعد. جرب تفعيل أزرار المحاكاة في الصفحة الرئيسية لقراءة حالة الجو الحالي.';
+        } else {
+          reply = 'مستوى الرطوبة الحالي لنظارتك (${widget.glassesId}) هو $humidityPercent%. ${humidityPercent! < 40 ? 'الرطوبة منخفضة ويُنصح بتفعيل رذاذ الترطيب.' : 'المستوى ضمن النطاق المريح والصحي للعين.'}';
+        }
+      } else if (query.contains('إضاءة') || query.contains('ضوء') || query.contains('ساطع') || query.contains('lux')) {
+        if (lightLux == null) {
+          reply = 'لم يتم استقبال بيانات الإضاءة حتى الآن. يمكنك تفعيل المحاكاة من الشاشة الرئيسية.';
+        } else {
+          reply = 'شدة الإضاءة المحيطة الحالية مسجلة عند $lightLux Lux. ${lightLux! > 800 ? 'الإضاءة عالية جداً وقد تجهد عينك، يفضل تقليل السطوع.' : 'الإضاءة ضمن المعدل الطبيعي والمريح.'}';
+        }
+      } else if (query.contains('حالة') || query.contains('تقرير') || query.contains('ملخص')) {
+        reply = 'ملخص نظارتك (${widget.glassesId}): الرطوبة (${humidityPercent ?? "غير مسجل"}%)، الإضاءة (${lightLux ?? "غير مسجل"} Lux)، وعدد التنبيهات المسجلة (${notifications.length}). النظام يعمل بكفاءة عالية!';
+      } else if (query.contains('قاعدة') || query.contains('20') || query.contains('راحة')) {
+        reply = 'قاعدة 20-20-20 تنص على أنه كل 20 دقيقة، يجب أن تنظر إلى شيء يبعد 20 قدمًا لمدة 20 ثانية لإراحة عضلات العين. نظامنا يتيح لك تفعيل تذكيرات أوتوماتيكية لذلك!';
+      } else if (query.contains('اسمك') || query.contains('من أنت')) {
+        reply = 'أنا المساعد الذكي لمنظومة HydroLens الذكية، تم تطويري لمساعدتك في حماية بصرك وتقديم تقارير فورية لحالة نظارتك.';
       } else {
-        reply = 'القراءات الحالية لمعرفك (${widget.glassesId}): الرطوبة $humidityPercent% والإضاءة $lightLux Lux.';
+        reply = 'لقد استقبلت استفسارك بشأن "${text}". بناءً على قراءات نظارتك الحالية بمعرف (${widget.glassesId})، أنصحك بمتابعة لوحة التحكم والتحقق من مستويات الرطوبة والإضاءة باستمرار لضمان راحة مثالية لعينيك.';
       }
 
       setState(() {
@@ -1222,6 +1224,7 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
     );
   }
 
+  // تم تصحيح تصميم مربعات الشات لتكون بخلفية واضحة ونصوص بارزة ومقروءة تماماً
   Widget _buildAIAssistantPage(Color cardBg) {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -1232,7 +1235,11 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: cardBg, borderRadius: BorderRadius.circular(16)),
+              decoration: BoxDecoration(
+                color: widget.isDarkMode ? const Color(0xFF0B0F19) : const Color(0xFFEDF2F7),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              ),
               child: ListView.builder(
                 itemCount: chatMessages.length,
                 itemBuilder: (context, index) {
@@ -1240,15 +1247,31 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
                   return Align(
                     alignment: msg.isUser ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      constraints: const BoxConstraints(maxWidth: 500),
                       decoration: BoxDecoration(
-                        color: msg.isUser ? const Color(0xFF5B61F4) : (widget.isDarkMode ? const Color(0xFF2B2E3D) : const Color(0xFFE8ECF5)),
-                        borderRadius: BorderRadius.circular(12),
+                        color: msg.isUser
+                            ? const Color(0xFF5B61F4)
+                            : (widget.isDarkMode ? const Color(0xFF1E293B) : Colors.white),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Text(
                         msg.text,
-                        style: TextStyle(fontSize: 12, color: msg.isUser ? Colors.white : null),
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: msg.isUser
+                              ? Colors.white
+                              : (widget.isDarkMode ? Colors.white : Colors.black87),
+                        ),
                       ),
                     ),
                   );
@@ -1256,14 +1279,16 @@ class _HydroLensMainControllerState extends State<HydroLensMainController> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _chatInputController,
                   decoration: InputDecoration(
-                    hintText: 'اسأل عن القراءات والتقارير...',
+                    hintText: 'اسأل المساعد عن الرطوبة أو الإضاءة...',
+                    filled: true,
+                    fillColor: cardBg,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
